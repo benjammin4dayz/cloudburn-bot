@@ -20,12 +20,18 @@ Below is a basic overview of the project structure:
 
 ```
 ├── .github/workflows/ci.yaml -> Github Action configuration
-├── src
-│   ├── commands.js           -> JSON payloads for commands
-│   ├── reddit.js             -> Interactions with the Reddit API
-│   ├── register.js           -> Sets up commands with the Discord API
+├── src/
+│   ├── backend/
+│       ├── register.js       -> Sets up commands with the Discord API
+│       ├── util.js           -> Utilities and helpers for non-user interactions
+│   ├── commands/
+│       ├── aww/              -> Command-specific directory
+│           ├── index.js      -> Command-specific entry point
+│           ├── reddit.js     -> Interactions with the Reddit API
+│       ├── index.js          -> Entry point for all consolidated commands
+│   ├── customize.js          -> Constants to customize commands
 │   ├── server.js             -> Discord app logic and routing
-├── test
+├── test/
 |   ├── test.js               -> Tests for app
 ├── wrangler.toml             -> Configuration for Cloudflare workers
 ├── package.json

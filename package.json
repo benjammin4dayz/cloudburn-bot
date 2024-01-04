@@ -1,7 +1,7 @@
 {
-  "name": "awwbot",
+  "name": "cloudburn",
   "version": "1.0.0",
-  "description": "A simple discord bot that uses intents to post pictures from r/aww",
+  "description": "A serverless, bare bones Discord bot for Cloudflare Workers. Adapted from 'awwbot' by Justin Beckwith",
   "type": "module",
   "private": true,
   "main": "src/server.js",
@@ -12,11 +12,11 @@
     "test": "c8 mocha test",
     "fix": "eslint --fix '**/*.js'",
     "lint": "eslint '**/*.js'",
-    "register": "node src/register.js",
+    "register": "node src/backend/register.js",
     "publish": "wrangler deploy"
   },
   "keywords": [],
-  "author": "Justin Beckwith <justin.beckwith@gmail.com>",
+  "author": "benjammin4dayz",
   "license": "MIT",
   "dependencies": {
     "discord-interactions": "^3.4.0",

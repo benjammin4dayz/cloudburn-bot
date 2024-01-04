@@ -3,35 +3,21 @@
  */
 
 import { Router } from 'itty-router';
+import { InteractionType, verifyKey } from 'discord-interactions';
+import { PONG, WAVE, handleError } from './backend/util.js';
+import { commands as cmd, metadata as data } from './commands/index.js';
 import {
-  InteractionResponseType,
-  InteractionType,
-  verifyKey,
-} from 'discord-interactions';
-import { AWW_COMMAND, INVITE_COMMAND } from './commands.js';
-import { getCuteUrl } from './reddit.js';
-import { InteractionResponseFlags } from 'discord-interactions';
-
-class JsonResponse extends Response {
-  constructor(body, init) {
-    const jsonBody = JSON.stringify(body);
-    init = init || {
-      headers: {
-        'content-type': 'application/json;charset=UTF-8',
-      },
-    };
-    super(jsonBody, init);
-  }
-}
+  TWITCH_USERNAME,
+  YOUTUBE_USERNAME,
+  REDDIT_SUBNAME,
+} from './customize.js';
 
 const router = Router();
 
 /**
  * A simple :wave: hello page to verify the worker is working.
  */
-router.get('/', (request, env) => {
-  return new Response(`👋 ${env.DISCORD_APPLICATION_ID}`);
-});
+router.get('/', (request, env) => WAVE(env));
 
 /**
  * Main route for all requests sent from Discord.  All incoming messages will
@@ -43,71 +29,49 @@ router.post('/', async (request, env) => {
     request,
     env,
   );
-  if (!isValid || !interaction) {
-    return new Response('Bad request signature.', { status: 401 });
-  }
-
-  if (interaction.type === InteractionType.PING) {
-    // The `PING` message is used during the initial webhook handshake, and is
-    // required to configure the webhook in the developer portal.
-    return new JsonResponse({
-      type: InteractionResponseType.PONG,
-    });
-  }
-
+  if (!isValid || !interaction) return handleError(401);
+  // The `PING` interaction is used to handshake with the Discord API.
+  if (interaction.type === InteractionType.PING) return PONG();
+  // Most user commands will come as `APPLICATION_COMMAND`.
   if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-    // Most user commands will come as `APPLICATION_COMMAND`.
-    switch (interaction.data.name.toLowerCase()) {
-      case AWW_COMMAND.name.toLowerCase(): {
-        const cuteUrl = await getCuteUrl();
-        return new JsonResponse({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: cuteUrl,
-          },
-        });
-      }
-      case INVITE_COMMAND.name.toLowerCase(): {
-        const applicationId = env.DISCORD_APPLICATION_ID;
-        const INVITE_URL = `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=applications.commands`;
-        return new JsonResponse({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: INVITE_URL,
-            flags: InteractionResponseFlags.EPHEMERAL,
-          },
-        });
-      }
+    const lc = (cmd) => cmd.name.toLowerCase();
+    switch (lc(interaction.data)) {
+      case lc(data.aww):
+        return cmd.aww();
+      case lc(data.invite):
+        return cmd.invite(env);
+      case lc(data.twitch):
+        return cmd.twitch(TWITCH_USERNAME);
+      case lc(data.youtube):
+        return cmd.youtube(YOUTUBE_USERNAME);
+      case lc(data.reddit):
+        return cmd.reddit(REDDIT_SUBNAME);
       default:
-        return new JsonResponse({ error: 'Unknown Type' }, { status: 400 });
+        return handleError(400);
     }
   }
-
-  console.error('Unknown Type');
-  return new JsonResponse({ error: 'Unknown Type' }, { status: 400 });
+  console.error('Unhandled interaction type');
+  return handleError(400);
 });
-router.all('*', () => new Response('Not Found.', { status: 404 }));
 
-async function verifyDiscordRequest(request, env) {
-  const signature = request.headers.get('x-signature-ed25519');
-  const timestamp = request.headers.get('x-signature-timestamp');
-  const body = await request.text();
-  const isValidRequest =
-    signature &&
-    timestamp &&
-    verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY);
-  if (!isValidRequest) {
-    return { isValid: false };
-  }
-
-  return { interaction: JSON.parse(body), isValid: true };
-}
+router.all('*', () => handleError(404));
 
 const server = {
-  verifyDiscordRequest: verifyDiscordRequest,
-  fetch: async function (request, env) {
-    return router.handle(request, env);
+  verifyDiscordRequest: async (request, env) => {
+    const signature = request.headers.get('x-signature-ed25519');
+    const timestamp = request.headers.get('x-signature-timestamp');
+    const body = await request.text();
+
+    const isValidRequest =
+      signature &&
+      timestamp &&
+      verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY);
+
+    return !isValidRequest
+      ? { isValid: false }
+      : { interaction: JSON.parse(body), isValid: true };
   },
+  fetch: async (request, env) => router.handle(request, env),
 };
 
 export default server;

@@ -5,10 +5,10 @@ import {
   InteractionType,
   InteractionResponseFlags,
 } from 'discord-interactions';
-import { AWW_COMMAND, INVITE_COMMAND } from '../src/commands.js';
+import { metadata } from './../src/commands/index.js';
+import { redditUrl } from './../src/commands/aww/reddit.js';
 import sinon from 'sinon';
 import server from '../src/server.js';
-import { redditUrl } from '../src/reddit.js';
 
 describe('Server', () => {
   describe('GET /', () => {
@@ -63,7 +63,7 @@ describe('Server', () => {
       const interaction = {
         type: InteractionType.APPLICATION_COMMAND,
         data: {
-          name: AWW_COMMAND.name,
+          name: metadata.aww.name,
         },
       };
 
@@ -102,7 +102,7 @@ describe('Server', () => {
       const interaction = {
         type: InteractionType.APPLICATION_COMMAND,
         data: {
-          name: INVITE_COMMAND.name,
+          name: metadata.invite.name,
         },
       };
 
@@ -126,7 +126,7 @@ describe('Server', () => {
         InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       );
       expect(body.data.content).to.include(
-        'https://discord.com/oauth2/authorize?client_id=123456789&scope=applications.commands',
+        'https://discord.com/oauth2/authorize?client_id=123456789&permissions=2147485696&scope=bot+applications.commands',
       );
       expect(body.data.flags).to.equal(InteractionResponseFlags.EPHEMERAL);
     });
